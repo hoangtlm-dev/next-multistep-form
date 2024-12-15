@@ -1,3 +1,4 @@
+// Libs
 import { useState } from 'react'
 
 interface Step {
@@ -11,23 +12,23 @@ interface UseMultistepForm {
   initialStep?: number
 }
 
-export function useMultistepForm({ steps, initialStep = 0 }: UseMultistepForm) {
+export function useMultistepForm({ steps, initialStep = 1 }: UseMultistepForm) {
   const [currentStep, setCurrentStep] = useState(initialStep)
 
   const nextStep = () => {
-    if (currentStep < steps.length - 1) {
+    if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1)
     }
   }
 
   const prevStep = () => {
-    if (currentStep > 0) {
+    if (currentStep > 1) {
       setCurrentStep(currentStep - 1)
     }
   }
 
   const reset = () => {
-    setCurrentStep(0)
+    setCurrentStep(1)
   }
 
   const currentFields = steps[currentStep]?.fields ?? [] // Return empty array if fields are not defined
@@ -36,8 +37,8 @@ export function useMultistepForm({ steps, initialStep = 0 }: UseMultistepForm) {
     currentStep,
     currentStepInfo: steps[currentStep],
     currentFields,
-    isFirstStep: currentStep === 0,
-    isLastStep: currentStep === steps.length - 1,
+    isFirstStep: currentStep === 1,
+    isLastStep: currentStep === steps.length,
     nextStep,
     prevStep,
     reset

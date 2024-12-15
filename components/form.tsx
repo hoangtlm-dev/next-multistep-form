@@ -1,9 +1,22 @@
 'use client'
 
+// Libs
 import { motion } from 'framer-motion'
-import { useForm, SubmitHandler } from 'react-hook-form'
-import { z } from 'zod'
+import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+
+// Interfaces
+import { User } from '@/interfaces/user'
+
+// Components
+import PersonalInfoForm from '@/components/PersonalInfoForm'
+import AddressForm from '@/components/AddressForm'
+import ConfirmInfo from '@/components/ConfirmInfo'
+
+// Schemas
+import { AddressSchema, PersonalInfoSchema } from '@/lib/schema'
+
+// Hooks
 import { useMultistepForm } from '@/hooks/useMultistepForm'
 
 const steps = [
@@ -18,45 +31,20 @@ const steps = [
     fields: ['country', 'state', 'city', 'street', 'zip']
   },
   {
-    id: 'Confirm',
-    name: 'Confirm Information' // Confirmation step
+    id: 'Step 3',
+    name: 'Confirm Information'
   },
-  { id: 'Complete', name: 'Complete' } // Completion step
+  { id: 'Step 4', name: 'Complete' }
 ]
 
-const FormDataSchema = z.object({
-  firstName: z.string().nonempty('First name is required'),
-  lastName: z.string().nonempty('Last name is required'),
-  email: z.string().email('Invalid email address'),
-  country: z.string().optional(),
-  state: z.string().optional(),
-  city: z.string().optional(),
-  street: z.string().optional(),
-  zip: z.string().optional()
-})
-
-type Inputs = z.infer<typeof FormDataSchema>
-
 export default function Form() {
-  const {
-    currentStep,
-    currentStepInfo,
-    currentFields,
-    isFirstStep,
-    isLastStep,
-    nextStep,
-    prevStep,
-    reset
-  } = useMultistepForm({ steps })
+  const { currentStep, nextStep, prevStep, reset } = useMultistepForm({ steps })
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    trigger,
-    formState: { errors }
-  } = useForm<Inputs>({
-    resolver: zodResolver(FormDataSchema),
+  const schemas = [PersonalInfoSchema, AddressSchema]
+  const currentSchema = schemas[currentStep - 1]
+
+  const { control, getValues, watch, formState } = useForm<User>({
+    resolver: zodResolver(currentSchema),
     defaultValues: {
       firstName: '',
       lastName: '',
@@ -66,33 +54,29 @@ export default function Form() {
       city: '',
       street: '',
       zip: ''
-    }
+    },
+    mode: 'all'
   })
 
-  const watchAllFields = watch() // Watch all form data
+  const allFields = watch()
 
-  const processForm: SubmitHandler<Inputs> = data => {
-    console.log('Form Submitted:', data)
-    reset()
+  const handleCancel = () => {
+    prevStep()
   }
 
-  const handleNext = async () => {
-    if (currentFields?.length) {
-      const isValid = await trigger(currentFields as (keyof Inputs)[], {
-        shouldFocus: true
-      })
-      if (!isValid) return
-    }
+  const handleConfirm = () => {
+    const { firstName, lastName, email, country, state, city, street, zip } =
+      allFields
+    const personalInfo = { firstName, lastName, email }
+    const address = { country, state, city, street, zip }
 
-    if (isLastStep) {
-      await handleSubmit(processForm)()
-    } else {
-      nextStep()
-    }
+    console.log('Personal info: ', personalInfo)
+    console.log('Address: ', address)
+    nextStep()
   }
 
   return (
-    <section className='absolute inset-0 flex flex-col justify-between p-24'>
+    <section className='absolute inset-0 flex flex-col p-24'>
       {/* Steps Navigation */}
       <nav aria-label='Progress'>
         <ol role='list' className='space-y-4 md:flex md:space-x-8 md:space-y-0'>
@@ -100,11 +84,11 @@ export default function Form() {
             <li key={step.name} className='md:flex-1'>
               <div
                 className={`group flex w-full flex-col ${
-                  currentStep === index
+                  currentStep === index + 1
                     ? 'border-l-4 border-sky-600'
                     : 'border-l-4 border-gray-200'
                 } py-2 pl-4 md:border-l-0 md:border-t-4 md:pb-0 md:pl-0 md:pt-4`}
-                aria-current={currentStep === index ? 'step' : undefined}
+                aria-current={currentStep === index + 1 ? 'step' : undefined}
               >
                 <span className='text-sm font-medium text-gray-500'>
                   {step.id}
@@ -117,73 +101,45 @@ export default function Form() {
       </nav>
 
       {/* Form */}
-      <form className='mt-12 py-12' onSubmit={handleSubmit(processForm)}>
-        {currentStepInfo?.id === 'Confirm' ? (
-          <motion.div
-            initial={{ x: '50%', opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.3 }}
-          >
-            <h2 className='text-base font-semibold leading-7 text-gray-900'>
-              Confirm Your Information
-            </h2>
-            <ul className='mt-4'>
-              {Object.entries(watchAllFields).map(([key, value]) => (
-                <li key={key} className='mt-2'>
-                  <strong className='capitalize'>{key}:</strong>{' '}
-                  {value || 'N/A'}
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-        ) : (
-          <motion.div
-            initial={{ x: '50%', opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.3 }}
-          >
-            <h2 className='text-base font-semibold leading-7 text-gray-900'>
-              {currentStepInfo?.name}
-            </h2>
+      <form className='mt-12 py-12'>
+        <motion.div
+          key={currentStep}
+          initial={{ x: 100, opacity: 0 }} // Slide from right and fade in
+          animate={{ x: 0, opacity: 1 }} // Slide in and fade in
+          exit={{ x: -100, opacity: 0 }} // Slide out to left and fade out
+          transition={{
+            type: 'spring',
+            stiffness: 300,
+            damping: 30,
+            duration: 0.5
+          }}
+        >
+          {currentStep === 1 && (
+            <PersonalInfoForm
+              control={control}
+              formState={formState}
+              onNext={() => nextStep()}
+            />
+          )}
 
-            {/* Render fields dynamically */}
-            {currentFields.map(field => (
-              <div key={field} className='mt-4'>
-                <label htmlFor={field} className='block text-sm font-medium'>
-                  {field}
-                </label>
-                <input
-                  id={field}
-                  {...register(field as keyof Inputs)}
-                  className='block w-full rounded-md border py-2'
-                />
-                {errors[field as keyof Inputs]?.message && (
-                  <p className='mt-2 text-sm text-red-400'>
-                    {errors[field as keyof Inputs]?.message}
-                  </p>
-                )}
-              </div>
-            ))}
-          </motion.div>
-        )}
+          {currentStep === 2 && (
+            <AddressForm
+              control={control}
+              formState={formState}
+              onNext={() => nextStep()}
+            />
+          )}
 
-        <div className='mt-8 flex justify-between'>
-          <button
-            type='button'
-            onClick={prevStep}
-            disabled={isFirstStep}
-            className='rounded-md bg-gray-300 px-4 py-2'
-          >
-            Previous
-          </button>
-          <button
-            type='button'
-            onClick={handleNext}
-            className='rounded-md bg-blue-600 px-4 py-2 text-white'
-          >
-            {isLastStep ? 'Submit' : 'Next'}
-          </button>
-        </div>
+          {currentStep == 3 && (
+            <ConfirmInfo
+              data={getValues()}
+              onCancel={handleCancel}
+              onConfirm={handleConfirm}
+            />
+          )}
+
+          {currentStep === 4 && <h3>Completed</h3>}
+        </motion.div>
       </form>
     </section>
   )

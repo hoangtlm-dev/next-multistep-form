@@ -1,12 +1,18 @@
+// Libs
 import { z } from 'zod'
 
-export const FormDataSchema = z.object({
+export const PersonalInfoSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
-  email: z.string().min(1, 'Email is required').email('Invalid email address'),
+  email: z.string().min(1, 'Email is required').email('Invalid email address')
+})
+
+export const AddressSchema = z.object({
   country: z.string().min(1, 'Country is required'),
-  street: z.string().min(1, 'Street is required'),
-  city: z.string().min(1, 'City is required'),
   state: z.string().min(1, 'State is required'),
+  city: z.string().min(1, 'City is required'),
+  street: z.string().min(1, 'Street is required'),
   zip: z.string().min(1, 'Zip is required')
 })
+
+export const FormDataSchema = PersonalInfoSchema.merge(AddressSchema)
